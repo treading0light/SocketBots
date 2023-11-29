@@ -1,30 +1,20 @@
 <template>
     <div class="flex justify-end">
 
-        <!-- <UContainer class="bg-red-500">
-            <Placeholder class="h-32" />
-        </UContainer> -->
+        <LoginModal v-if="userLoggedIn === false" @login-ready="loginUser" />
         
-        <div id="chat-box" class="h-screen w-[80%] px-10 bg-gray-800 flex flex-col gap-3 items-center">
-            <div id="chat-header" class="border-b-2 w-full">
-                <h2 class="text-2xl">Chat</h2>
-            </div>
-
-            <div id="chat-body" class="flex flex-col gap-2 overflow-x-auto h-full w-2/3">
-                <ContentRenderer v-for="message in chatMessages" :value="message['content']" 
-                :class="message.role === 'assistant' ? 'self-start' : 'self-end border-primary'" >
-                </ContentRenderer>
-            </div>
-
-            <UTextarea color="primary" variant="outline" placeholder="Search..." :rows="4"
-            v-model="inputText" @keydown.enter="sendInput"
-            class="w-2/3 self-center" />
-        </div>
+        <ChatBox :chatMessages="chatMessages" />
 
     </div>
 </template>
 
 <script setup>
+import { io } from "socket.io-client"
+const config = useRuntimeConfig()
+const socket = io(config.public.serverUrl)
+
+const userLoggedIn = ref(null)
+
 const inputText = ref('')
 const chatMessages = ref([])
 
@@ -37,5 +27,31 @@ const sendInput = (event) => {
     inputText.value = ''
     console.log(chatMessages.value)
 }
+
+const loginUser = (credentials) => {
+    socket.emit('login', credentials)
+}
+
+onMounted(() => {
+    const jwtToken = useCookie('jwt')
+
+    if (jwtToken) {
+        userLoggedIn.value = true
+    } else {
+        userLoggedIn.value = false
+    }
+})
+
+socket.on('connect', () => {
+        console.log('Connected to server');
+    })
+
+socket.on('login-response', (response) => {
+    if (response.status == 200) {
+        userLoggedIn.value = true
+    }
+
+
+})
 
 </script>

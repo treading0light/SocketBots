@@ -14,7 +14,7 @@
 const email = ref('')
 const password = ref('')
 
-const emit = defineEmits(['login-sucess'])
+const emit = defineEmits(['login-ready'])
 
 const submitLogin = async () => {
     const config = useRuntimeConfig()
@@ -30,7 +30,7 @@ const submitLogin = async () => {
         console.error(error)
     } else {
         console.log(data)
-        emit('login-sucess')
+        emit('login-ready', { email: email.value, password: password.value })
     }
 }
 </script>
