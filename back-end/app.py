@@ -2,6 +2,8 @@ import os, hashlib, queue, threading, json
 from flask import Flask
 from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit
+from controllers.message_controller import new_message, get_messages_in_conversation
+from controllers.conversation_controller import new_conversation, get_all_conversations
 from agents import agent_frank
 
 app = Flask(__name__)
@@ -21,18 +23,20 @@ def print_thread_status_and_queue_contents():
         queue_status = "empty" if q.empty() else "not empty"
         print(f"Queue {i} is {queue_status}")
 
+@socketio.on('get-conversations')
+def get_conversations(callback):
+    conversations = get_all_conversations()
+    callback(conversations)
+
+@socketio.on('get-messages')
+def get_messages(conversation_id, callback):
+    messages = get_messages_in_conversation(conversation_id)
+    callback(messages)
 
 @socketio.on('connect')
 def handle_connect():
     print("Client connected")
     print_thread_status_and_queue_contents()
-
-    # try:
-
-
-    # except Exception as e:
-
-    
 
 
 @socketio.on('disconnect')
@@ -43,11 +47,15 @@ def handle_disconnect():
 
 # This function handles incoming messages
 @socketio.on('user-input')
-def handle_user_input(input):
+def handle_user_input(input, conversation_id):
     print("Received message: ", input)
-    data = json.loads(input)
-    layer_1_queue.put(data)
+    message = new_message(input, "user", conversation_id)
+    layer_1_queue.put(message)
 
+@socketio.on('new-conversation')
+def handle_new_conversation(callback):
+    conversation = new_conversation()
+    callback(conversation)
 
 def send_to_user(in_queue):
     while True:

@@ -1,7 +1,7 @@
 from models import db, Message
 
-def add_message(message : ChatMessage):
-    new_message = Message(content=content)
+def new_message(content, role, conversation_id):
+    new_message = Message(content=content, role=role, conversation_id=conversation_id)
     db.session.add(new_message)
     db.session.commit()
     return new_message
