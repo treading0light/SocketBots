@@ -5,17 +5,17 @@
         </div>
 
         <div id="chat-body" class="flex flex-col gap-2 overflow-x-auto h-full w-2/3">
-            <MarkdownRenderer v-for="message in chatMessages" v-if="message['role'] == 'assistant'" :value="message['content']" 
-            :class="message['role'] === 'assistant' ? 'self-start' : 'self-end border-primary'" >
-            </MarkdownRenderer>
+            
 
-            <div v-else>
-                <p>{{ message['content'] }}</p>
+            <div v-for="message in chatMessages">
+                <MarkdownRenderer v-if="message['role'] == 'assistant'" :value="message['content']" >
+                </MarkdownRenderer>
+                <p v-else >{{ message['content'] }}</p>
             </div>
         </div>
 
         <UTextarea color="primary" variant="outline" placeholder="Search..." :rows="4"
-        v-model="inputText" @keydown.enter="sendInput"
+        v-model="inputText" @keydown.enter="signalInputReady"
         class="w-2/3 self-center" />
     </div>
 
@@ -26,17 +26,21 @@
 const inputText = ref('')
 
 const props = defineProps({
-    chatMessages: Array
+    chatMessages: {
+        type: Array,
+        default: []
+    }
 })
 
-const sendInput = (event) => {
+const emit = defineEmits(['input-ready'])
+
+const signalInputReady = (event) => {
     event.preventDefault()
 
-    let message = { role: 'user', content: inputText.value }
-    props.chatMessages.push(message)
+    emit('input-ready', inputText.value)
 
     inputText.value = ''
-    console.log(chatMessages.value)
+
 }
 
 </script>
