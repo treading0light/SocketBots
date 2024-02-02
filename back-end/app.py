@@ -4,10 +4,17 @@ from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit
 from controllers.message_controller import new_message, get_messages_in_conversation
 from controllers.conversation_controller import new_conversation, get_all_conversations
+from models import db
 from agents import agent_frank
 
 app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///yourdatabase.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db.init_app(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
+
+with app.app_context():
+    db.create_all()
 
 layer_1_queue = queue.Queue()
 output_to_user_queue = queue.Queue()
@@ -24,14 +31,14 @@ def print_thread_status_and_queue_contents():
         print(f"Queue {i} is {queue_status}")
 
 @socketio.on('get-conversations')
-def get_conversations(callback):
+def get_conversations():
     conversations = get_all_conversations()
-    callback(conversations)
+    return conversations
 
 @socketio.on('get-messages')
-def get_messages(conversation_id, callback):
+def get_messages(conversation_id):
     messages = get_messages_in_conversation(conversation_id)
-    callback(messages)
+    return messages
 
 @socketio.on('connect')
 def handle_connect():
@@ -53,9 +60,9 @@ def handle_user_input(input, conversation_id):
     layer_1_queue.put(message)
 
 @socketio.on('new-conversation')
-def handle_new_conversation(callback):
+def handle_new_conversation():
     conversation = new_conversation()
-    callback(conversation)
+    return conversation
 
 def send_to_user(in_queue):
     while True:

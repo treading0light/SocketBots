@@ -1,4 +1,4 @@
-from models import db, Message
+from models import db, Conversation
 
 def new_conversation():
     conversation = Conversation(name="...")
@@ -7,7 +7,11 @@ def new_conversation():
     return conversation
 
 def get_all_conversations():
-    return Conversation.query.all()
+    conversations = Conversation.query.all()
+    if not conversations:
+        new_convo = new_conversation()
+        return [new_convo]
+    return conversations
 
 def rename_conversation(conversation_id, new_name):
     conversation = Conversation.query.get(conversation_id)
