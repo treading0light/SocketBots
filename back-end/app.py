@@ -4,8 +4,9 @@ from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit
 from controllers.message_controller import new_message, get_messages_in_conversation
 from controllers.conversation_controller import new_conversation, get_all_conversations, delete_conversation, update_last_opened
+from tools import assign_to_crew
 from models import db
-from agents import agent_frank, create_name
+from agents import agent_frank, create_name, main_chat
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///yourdatabase.db'
@@ -58,7 +59,7 @@ def get_messages(conversation_id):
 @socketio.on('connect')
 def handle_connect():
     print("Client connected")
-    print_thread_status_and_queue_contents()
+    # print_thread_status_and_queue_contents()
 
 
 @socketio.on('disconnect')
@@ -77,6 +78,7 @@ def handle_user_input(messages, conversation_id):
     # print("Received messages: ", messages)
     user_message = messages.pop()
     print(f"User message: {user_message}")
+    print(f'remaining messages: {messages}')
     message = new_message(**user_message)
     messages.append(message)
     # print("Messages after adding user message: ", messages)
@@ -86,10 +88,25 @@ def handle_user_input(messages, conversation_id):
 def send_to_user(in_queue, app):
     while True:
         raw_message, convo_id = in_queue.get()
+        if "[TOOL_CALL]" in raw_message['content'] and "[/TOOL_CALL]" in raw_message['content']:
+            remaining_message = make_tool_call(raw_message, convo_id)
         with app.app_context():
-            message = new_message(raw_message.content, raw_message.role, convo_id)  
-        print(f"sending to user {message}")
-        socketio.emit('ai-output', [message, convo_id])
+            message = new_message(remaining_message.content, remaining_message.role, convo_id)
+        if len(message['content']) > 0:
+            print(f"sending to user {message}")
+            socketio.emit('ai-output', [message, convo_id])
+
+def make_tool_call(message, conversation_id):
+    # extract everything from the string inside of [TOOL_CALL] and [/TOOL_CALL]
+
+    
+        # extract the string inside of [TOOL_CALL] and [/TOOL_CALL]
+        tool_call = json.loads(message['content'].split("[TOOL_CALL]")[1].split("[/TOOL_CALL]")[0])
+        # tool_call should be JSON as a string, turn it into a dictionary
+        if tool_call['name'] == 'assign_to_crew':
+            threading.Thread(target=assign_to_crew, args=(background_tasks_queue, app, socketio)).start()
+            background_tasks_queue.put((tool_call.parameters, conversation_id))
+            background_tasks_queue.put(())
 
 
 threading.Thread(target=agent_frank, args=(layer_1_queue, output_to_user_queue)).start()

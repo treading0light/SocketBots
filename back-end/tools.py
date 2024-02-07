@@ -1,6 +1,6 @@
 from langchain.tools import tool
-from controllers.conversation_controller import new_conversation, get_all_conversations, delete_conversation, rename_conversation
-from controllers.message_controller import new_message, get_messages_in_conversation
+from controllers.conversation_controller import rename_conversation
+from crews import GeneralCrew
 
 class LocalDBTools():
 
@@ -17,3 +17,28 @@ class LocalDBTools():
         The result of the rename operation, typically a success message or updated conversation object.
         """
         return rename_conversation(conversation_id, new_name)
+    
+    def assign_to_crew(in_queue, out_queue):
+        '''
+        Puts a crew of AI agents to work on a set of tasks that you provide.
+        Crew options: {naming_crew: "For renaming the current conversation", general_crew: "for general tasks"}
+
+        Parameters:
+        crew (str): The name of the crew to assign the tasks to.
+        pre_tasks (list): A list of tasks to be assigned to the crew.
+        '''
+        parameters, convo_id = in_queue.get()
+        crew_name = parameters[0]
+        pre_tasks = parameters[1:]
+        tasks = []
+        for t in pre_tasks:
+            tasks.append(Task(
+                description=t,
+                # expected_output=t["expected_output"],
+                max_inter=3,
+            ))
+        if crew_name == "GeneralCrew":
+            res = GeneralCrew(tasks).run()
+            if type(res) == str:
+                res = "FROM GENERAL CREW: " + res
+            out_queue.put((res, convo_id))

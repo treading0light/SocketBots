@@ -9,7 +9,7 @@ def new_conversation():
     return conversation.to_dict()
 
 def get_all_conversations():
-    conversations = Conversation.query.order_by(Conversation.last_opened).all()
+    conversations = Conversation.query.order_by(Conversation.last_opened.desc()).all()
     if not conversations:
         new_convo = new_conversation()
         return [new_convo]
@@ -40,4 +40,5 @@ def update_last_opened(conversation_id):
     conversation = Conversation.query.get(conversation_id)
     conversation.last_opened = db.func.now()
     db.session.commit()
+    print("Conversation last opened updated: " + conversation.last_opened.isoformat())
     return conversation.to_dict()
