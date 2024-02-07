@@ -1,9 +1,9 @@
 <template>
-    <div class="flex justify-end text-white">
+    <div class="flex justify-end">
+        <SideNav @conversationSelected="selectConversation" :conversations="conversations" :currentConversation="currentConversation" :socket="socket" />
+        <ChatBox :socket="socket" :chatMessages="currentConversation.messages" :name="currentConversation.name"
+        @input-ready="sendInput" @rename-conversation="requestRename" />
 
-        <LoginModal v-if="userLoggedIn === false" @login-ready="loginUser" />
-        
-        <ChatBox :chatMessages="chatMessages" @input-ready="sendInput" />
 
     </div>
 </template>
@@ -11,56 +11,72 @@
 <script setup>
 import { io } from "socket.io-client"
 const config = useRuntimeConfig()
-console.log(`url  ${config.public.serverUrl}`)
 const socket = io(config.public.serverUrl)
-
-const userLoggedIn = ref(null)
-
+const conversations = ref([])
+const currentConversation = ref({"id": 0, "name": "None"})
 const chatMessages = ref([])
 
 const sendInput = (input) => {
 
-    let message = { role: 'user', content: input }
-    chatMessages.value.push(message)
+    let message = { role: 'user', content: input, conversation_id: currentConversation.value.id }
     console.log(message)
 
+    let messages = []
     if (chatMessages.value.length >= 3) {
-        let messages = JSON.stringify(chatMessages.value.slice(-3))
-        
-        socket.emit('user-input', messages)
+        messages = chatMessages.value.slice(-3)
     } else {
-        let messages = JSON.stringify(chatMessages.value)
-        socket.emit('user-input', messages)
+        messages = chatMessages.value
     }
+
+    messages.push(message)
+
+    socket.emit('user-input', messages, currentConversation.value.id, (response) => {
+        console.log('response from server' + JSON.stringify(response))
+        chatMessages.value.push(response)
+    })
 }
 
-const loginUser = (credentials) => {
-    socket.emit('login', credentials)
+const getMessages = (conversationId) => {
+    socket.emit('get-messages', conversationId, (response) => {
+        chatMessages.value = response
+    })
+}
+
+const getAllConversations = () => {
+    socket.emit('get-conversations', (response) => {
+        conversations.value = response
+        // emit('conversationSelected', conversations.value[0])
+    })
+}
+
+const selectConversation = (conversation) => {
+    currentConversation.value = conversation
+}
+
+const requestRename = () => {
+    socket.emit('request-rename', currentConversation.value.id)
 }
 
 onMounted(() => {
-    const jwtToken = useCookie('jwt')
-
-    if (jwtToken) {
-        userLoggedIn.value = true
-    } else {
-        userLoggedIn.value = false
-    }
+    getAllConversations()
 })
 
 socket.on('connect', () => {
         console.log('Connected to server');
     })
 
-socket.on('login-response', (response) => {
-    if (response.status == 200) {
-        userLoggedIn.value = true
+socket.on('ai-output', (response) => {
+    try {
+        const { message, convoId } = response;
+        console.log('Received message:', message);
+        if (convoId === currentConversation.value.id) {
+            chatMessages.value.push(message)
+        }
+    } catch (error) {
+    console.error('Error parsing JSON:', error);
     }
+    
 })
 
-socket.on('ai-output', (response) => {
-    let data = JSON.parse(response)
-    console.log(data)
-})
 
 </script>
