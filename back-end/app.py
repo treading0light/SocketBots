@@ -1,12 +1,11 @@
-import os, hashlib, queue, threading, json
+import queue, threading
 from flask import Flask
-from dotenv import load_dotenv
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO
 from controllers.message_controller import new_message, get_messages_in_conversation
 from controllers.conversation_controller import new_conversation, get_all_conversations, delete_conversation, update_last_opened
-from tools import assign_to_crew
+from tools import MainChatTools as tools
 from models import db
-from agents import agent_frank, create_name, main_chat
+from agents import SoloAgents
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///yourdatabase.db'
@@ -20,6 +19,7 @@ with app.app_context():
 layer_1_queue = queue.Queue()
 output_to_user_queue = queue.Queue()
 background_tasks_queue = queue.Queue()
+tool_call_queue = queue.Queue()
 
 def print_thread_status_and_queue_contents():
     # Print thread status
@@ -74,43 +74,42 @@ def handle_request_rename(conversation_id):
 
 @socketio.on('user-input')
 def handle_user_input(messages, conversation_id):
+    check_threads()
 
     # print("Received messages: ", messages)
     user_message = messages.pop()
     print(f"User message: {user_message}")
-    print(f'remaining messages: {messages}')
     message = new_message(**user_message)
     messages.append(message)
     # print("Messages after adding user message: ", messages)
     layer_1_queue.put((messages, conversation_id))
+    
     return message
 
-def send_to_user(in_queue, app):
+def send_to_user(in_queue, tool_call_queue, app):
     while True:
         raw_message, convo_id = in_queue.get()
-        if "[TOOL_CALL]" in raw_message['content'] and "[/TOOL_CALL]" in raw_message['content']:
-            remaining_message = make_tool_call(raw_message, convo_id)
+        if "[TOOL_CALL]" in raw_message.content and "[/TOOL_CALL]" in raw_message.content:
+            tool_call_queue.put((raw_message, convo_id))
         with app.app_context():
-            message = new_message(remaining_message.content, remaining_message.role, convo_id)
+            message = new_message(raw_message.content, raw_message.role, convo_id)
+            message["conversation_id"] = convo_id
         if len(message['content']) > 0:
             print(f"sending to user {message}")
-            socketio.emit('ai-output', [message, convo_id])
+            socketio.emit('ai-output', message)
 
-def make_tool_call(message, conversation_id):
-    # extract everything from the string inside of [TOOL_CALL] and [/TOOL_CALL]
-
-    
-        # extract the string inside of [TOOL_CALL] and [/TOOL_CALL]
-        tool_call = json.loads(message['content'].split("[TOOL_CALL]")[1].split("[/TOOL_CALL]")[0])
-        # tool_call should be JSON as a string, turn it into a dictionary
-        if tool_call['name'] == 'assign_to_crew':
-            threading.Thread(target=assign_to_crew, args=(background_tasks_queue, app, socketio)).start()
-            background_tasks_queue.put((tool_call.parameters, conversation_id))
-            background_tasks_queue.put(())
+def check_threads():
+    for thread in threading.enumerate():
+        if not thread.is_alive():
+            print("Thread is dead")
+            thread.start()
 
 
-threading.Thread(target=agent_frank, args=(layer_1_queue, output_to_user_queue)).start()
-threading.Thread(target=send_to_user, args=(output_to_user_queue, app)).start()
+threads = [
+    threading.Thread(target=SoloAgents.agent_frank, args=(layer_1_queue, output_to_user_queue)).start(),
+    threading.Thread(target=tools.make_tool_call, args=(tool_call_queue, output_to_user_queue)).start(),
+    threading.Thread(target=send_to_user, args=(output_to_user_queue, tool_call_queue, app)).start()
+]
 
 if __name__ == '__main__':
     socketio.run(app)

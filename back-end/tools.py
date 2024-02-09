@@ -18,7 +18,13 @@ class LocalDBTools():
         """
         return rename_conversation(conversation_id, new_name)
     
-    def assign_to_crew(in_queue, out_queue):
+class MainChatTools():
+
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def assign_to_crew(parameters):
         '''
         Puts a crew of AI agents to work on a set of tasks that you provide.
         Crew options: {naming_crew: "For renaming the current conversation", general_crew: "for general tasks"}
@@ -27,7 +33,6 @@ class LocalDBTools():
         crew (str): The name of the crew to assign the tasks to.
         pre_tasks (list): A list of tasks to be assigned to the crew.
         '''
-        parameters, convo_id = in_queue.get()
         crew_name = parameters[0]
         pre_tasks = parameters[1:]
         tasks = []
@@ -41,4 +46,20 @@ class LocalDBTools():
             res = GeneralCrew(tasks).run()
             if type(res) == str:
                 res = "FROM GENERAL CREW: " + res
-            out_queue.put((res, convo_id))
+            return res
+
+    def make_tool_call(in_queue, out_queue):
+        tool_options = {
+            "assign_to_crew": MainChatTools.assign_to_crew
+        }
+        while True:
+
+            message, convo_id = in_queue.get()
+            # extract the string inside of [TOOL_CALL] and [/TOOL_CALL]
+            tool_call = message['content'].split("[TOOL_CALL]")[1].split("[/TOOL_CALL]")[0]
+            print("Tool call: ", tool_call)
+            
+            # tool_call should be JSON as a string, turn it into a dictionary
+            tool_output = tool_options[tool_call["name"]](tool_call["parameters"])
+                
+            out_queue.put((tool_output, convo_id))

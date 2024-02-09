@@ -1,25 +1,15 @@
-from langchain_openai import ChatOpenAI
-from langchain.agents import Tool
 from langchain_community.tools import DuckDuckGoSearchRun
 from openai import OpenAI
-from crewai import Agent, Task, Crew, Process
-from time import sleep
-import json
+from crewai import Agent
 from dotenv import load_dotenv
-
-from controllers.conversation_controller import rename_conversation
-from tools import LocalDBTools
-
-
 
 load_dotenv()
 client = OpenAI()
-db_tools = LocalDBTools()
 search = DuckDuckGoSearchRun()
 
 class SoloAgents():
 
-    def agent_frank(self, in_queue, out_queue):
+    def agent_frank(in_queue, out_queue):
         tool_choices = [
             {
                 "name": "assign_to_crew",
@@ -43,6 +33,7 @@ class SoloAgents():
                          }
 
         while True:
+            print('frank loop starts')
             messages, convo_id = in_queue.get()
             combined_messages = [system_message] + messages
 
@@ -53,6 +44,7 @@ class SoloAgents():
             )
             res = completion.choices[0].message
             out_queue.put((res, convo_id))
+           
 
     def agent_steve(messages):
 
