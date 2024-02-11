@@ -13,8 +13,10 @@ class SoloAgents():
         tool_choices = [
             {
                 "name": "assign_to_crew",
-                "description": "Puts a crew of AI agents to work on a set of tasks that you provide. Crew options: (NamingCrew: 'For renaming the current conversation', GeneralCrew: 'for general tasks')",
-                "parameters": ["crew_name (str)", "tasks (array)"]
+                "description": '''Puts a crew of AI agents to work on a set of steps that you provide. 
+                You can only choose from the Crew options. Break down the task into 2-3 steps and define them clearly in one or two sentences.
+                Crew options: (NamingCrew: 'For renaming the current conversation', GeneralCrew: 'for general tasks')''',
+                "parameters": ["crew_name (str)", "steps (array)"]
             }
         ]
         print("Frank is alive")
@@ -87,7 +89,12 @@ class SoloAgents():
 
 class NamingAgents():
 
+    def __init__(self):
+        from tools import LocalDBTools
+        self.tools = LocalDBTools()
+
     def elodin(self):
+        tool = self.tools.rename_conversation_tool
         return Agent(
             role="master namer",
             goal='''Given a summary of a conversation, give a title to the conversation in no more than 5 words. Respond with the title only.
@@ -95,15 +102,18 @@ class NamingAgents():
             backstory='''You are Master Elodin. You were an exceptionally brilliant student and also the youngest to have ever been admitted to the University, 
             at the age of 14. By the time you turned 18, you had become a Full Arcanist and began working as a Giller. 
             You continued on to become Master Namer and then Chancellor of the University, though the latter was short lived.''',
+            tools=[tool],
             verbose=True,
         )
     
     def summery_agent(self):
+        tool = self.tools.get_chat_history_tool
         return Agent(
             role="summery creator",
             goal="Given a chat history, create a summary of the conversation.",
             backstory='''You are a clever AI agent that has been trained to summarize conversations. 
             You are very good at understanding the context of a conversation and can summarize it in a few sentences. ''',
+            tools=[tool],
             verbose=True,
         )
     
@@ -116,6 +126,7 @@ class GeneralAgents():
             backstory='''As the Quality Guardian, your eye for detail is unmatched. With extensive experience in quality assurance across various industries, 
             you bring a meticulous and methodical approach to reviewing creative solutions. Your expertise lies in identifying flaws and ensuring every detail aligns with the project's highest standards.''',
             verbose=True,
+            allow_delegation=False
         )
     
     def creative_agent(self):
@@ -126,6 +137,7 @@ class GeneralAgents():
             With a background in diverse creative fields, you bring a wealth of inspiration to every project. 
             Your strength lies in synthesizing abstract concepts into tangible, innovative solutions that push the boundaries of what's possible.''',
             verbose=True,
+            allow_delegation=False
         )
 
 

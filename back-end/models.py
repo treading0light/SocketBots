@@ -35,6 +35,8 @@ class Conversation(db.Model):
 
         if self.messages:
             instance_dict["messages"] = [message.to_dict() for message in self.messages]
+        else:
+            instance_dict["messages"] = []
 
         # for attr in inspect(self).attrs:
         #     value = getattr(self, attr.key)

@@ -1,14 +1,15 @@
-from crewai import Crew, Process
-from agents import SoloAgents, NamingAgents, GeneralAgents
-from tasks import RenameTasks, DynamicTasks
+from crewai import Crew, Process, Task
+from agents import NamingAgents, GeneralAgents
+from tasks import RenameTasks
 
 class NamingCrew:
 
-    def __init__(self, messages):
+    def __init__(self, messages, convo_id):
         self.messages = messages
+        self.convo_id = convo_id
 
     def run(self):
-        history_string = ''
+        history_string = '# Chat History: \n'
         for message in self.messages:
             history_string += message['role'] + ': ' + message['content'] + " /n"
 
@@ -33,13 +34,18 @@ class GeneralCrew:
         def run(self):
 
             agents = GeneralAgents()
+
     
             crew = Crew(
-                agents=[agents.creative_agent, agents.qa_agent],
+                agents=[agents.creative_agent(), agents.qa_agent()],
                 tasks=self.tasks,
                 process=Process.sequential,
-                verbose=True
+                verbose=True,
+                callback=self.report_progress
             )
     
             result = crew.kickoff()
             return result
+        
+        def report_progress(self):
+            pass
