@@ -1,12 +1,12 @@
 <template>
     <div id="chat-box" class="h-screen w-5/6 px-10 bg-gray-800 flex flex-col gap-3 items-center text-gray-100">
 
-        <div id="chat-header" class="w-full border-b-2 flex justify-between mt-5">
+        <div id="chat-header" class="w-full border-b-2 flex justify-between py-2 mt-5">
             <h2 class="text-2xl">{{ name }}</h2>
             <UButton @click="renameConversation">Rename</UButton>
         </div>
 
-        <div id="chat-body" class="flex flex-col gap-2 overflow-y-auto h-full">
+        <div @scroll="logScroll" ref="chatBody" id="chat-body" class="w-full flex flex-col gap-2 overflow-y-scroll h-full">
 
             <div v-for="message in chatMessages" :class="message['role'] + '-messages'">
                 <MarkdownRenderer v-if="message['role'] == 'assistant'" :markdown="message['content']" class="" />
@@ -28,6 +28,7 @@
 <script setup>
 
 const inputText = ref('')
+const chatBody = ref(null)
 
 const props = defineProps({
     chatMessages: {
@@ -44,7 +45,7 @@ const props = defineProps({
     }
 })
 
-const emit = defineEmits(['input-ready', 'rename-conversation'])
+const emit = defineEmits(['input-ready', 'request-rename'])
 
 const signalInputReady = (event) => {
     event.preventDefault()
@@ -55,8 +56,35 @@ const signalInputReady = (event) => {
 
 }
 
+const scrollToLast = () => {
+    setTimeout(() => {
+        const container = chatBody.value
+        if (container) {
+            const children = container?.children
+            const lastMessageElement = children[children.length - 1]
+            if (lastMessageElement) {
+                lastMessageElement.scrollIntoView({  block: 'end' });
+            }
+        }
+    }, 100);
+}
+
+const lastMessageElement = computed(() => {
+    const children = chatBody.value?.children
+    return children ? children[children.length - 1] : null
+})
+
+const logScroll = (event) => {
+    console.log(event.target.scrollTop + event.target.offsetHeight, event.target.scrollHeight, event.target.offsetHeight)
+}
+
+watch(() => props.chatMessages.length, () => {
+    scrollToLast()
+    console.log('chat messages changed')
+})
+
 const renameConversation = () => {
-    emit('rename-conversation')
+    emit('request-rename')
 }
 
 

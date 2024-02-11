@@ -5,7 +5,7 @@
         <hr class="my-2">
 
         <div v-for="convo in conversations" :key="convo.id" class="flex">
-            <UButton  @click="emit('conversationSelected', convo)" 
+            <UButton  @click="selectConversation(convo)"
             class="text-black w-2/3 rounded-r-none">{{ convo.name >= 10 ? convo.name.substring(0, 10) : convo.name}}</UButton>
 
             <UButton  @click="deleteConversation(convo)" variant="outline"
@@ -32,24 +32,25 @@ const props = defineProps({
         default: []
     }
 })
-const emit = defineEmits(['conversationSelected'])
+const emit = defineEmits(['conversationSelected', 'conversationDeleted'])
 
 const selectConversation = (conversation) => {
-    props.currentConversation.value = conversation
+    emit('conversation-selected', conversation)
 }
 
 
 const newConversation = () => {
     props.socket.emit('new-conversation', (response) => {
         console.log(`response from sidenav ${response.id}`)
-        emit('conversationSelected', response)
+        props.conversations.push(response)
+        emit('conversation-selected', response)
     })
 }
 
 const deleteConversation = (conversation) => {
     props.socket.emit('delete-conversation', conversation.id, (response) => {
         console.log('deleted conversation')
-        conversations.value = conversations.value.filter((convo) => convo.id !== conversation.id)
+        emit('conversationDeleted', conversation)
         console.log(response)
     })
 }
@@ -62,6 +63,10 @@ props.socket.on('conversation-renamed', (response) => {
 })
 
 onMounted(() => {
+    setTimeout(() => {
+        selectConversation(props.conversations[0])
+        console.log('selected conversation' + props.conversations[0])
+    }, 100);
     
 })
 

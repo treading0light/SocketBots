@@ -1,10 +1,10 @@
 <template>
     <div class="flex justify-end">
-        <SideNav @conversationSelected="selectConversation" :conversations="conversations" :currentConversation="currentConversation" :socket="socket" />
+        <SideNav @request-rename="requestRename" @conversationDeleted="removeConversation" @conversation-selected="selectConversation"
+        :conversations="conversations" :currentConversation="currentConversation" :socket="socket" />
+
         <ChatBox :socket="socket" :chatMessages="currentConversation.messages" :name="currentConversation.name"
         @input-ready="sendInput" @rename-conversation="requestRename" />
-
-
     </div>
 </template>
 
@@ -14,32 +14,28 @@ const config = useRuntimeConfig()
 const socket = io(config.public.serverUrl)
 const conversations = ref([])
 const currentConversation = ref({"id": 0, "name": "None"})
-const chatMessages = ref([])
 
 const sendInput = (input) => {
 
-    let message = { role: 'user', content: input, conversation_id: currentConversation.value.id }
-    console.log(message)
+    let userMessage = { role: 'user', content: input, conversation_id: currentConversation.value.id }
 
     let messages = []
-    if (chatMessages.value.length >= 3) {
-        messages = chatMessages.value.slice(-3)
+    if (currentConversation.value.messages.length >= 20) {
+        messages = currentConversation.value.messages.slice(-20)
     } else {
-        messages = chatMessages.value
+        messages = currentConversation.value.messages
     }
 
-    messages.push(message)
+    const req = { messages: messages, user_message: userMessage, conversation_id: currentConversation.value.id }
 
-    socket.emit('user-input', messages, currentConversation.value.id, (response) => {
-        console.log('response from server' + JSON.stringify(response))
-        chatMessages.value.push(response)
+    socket.emit('user-input', req, (response) => {
+        console.log('response from server' + typeof(response) + response)
+        currentConversation.value.messages.push(response)
     })
 }
 
-const getMessages = (conversationId) => {
-    socket.emit('get-messages', conversationId, (response) => {
-        chatMessages.value = response
-    })
+const removeConversation = (conversation) => {
+    conversations.value = conversations.value.filter((convo) => convo.id !== conversation.id)
 }
 
 const getAllConversations = () => {
@@ -57,6 +53,10 @@ const requestRename = () => {
     socket.emit('request-rename', currentConversation.value.id)
 }
 
+const cleanMessage = (message) => {
+    return { content: message.content, role: message.role }
+}
+
 onMounted(() => {
     getAllConversations()
 })
@@ -67,11 +67,9 @@ socket.on('connect', () => {
 
 socket.on('ai-output', (response) => {
     try {
-        const { message, convoId } = response;
+        const message = response;
         console.log('Received message:', message);
-        if (convoId === currentConversation.value.id) {
-            chatMessages.value.push(message)
-        }
+        currentConversation.value.messages.push(cleanMessage(message))
     } catch (error) {
     console.error('Error parsing JSON:', error);
     }
