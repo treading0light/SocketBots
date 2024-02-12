@@ -37,7 +37,7 @@ class LocalDBTools():
         chat_history = ''
         for message in messages:
             chat_history += message['role'] + ': ' + message['content'] + " /n"
-        return messages
+        return chat_history
     
 class MainChatTools():
 

@@ -116,15 +116,12 @@ class NamingAgents():
         self.tools = LocalDBTools()
 
     def elodin(self):
-        tool = self.tools.rename_conversation_tool
         return Agent(
             role="master namer",
-            goal='''Given a summary of a conversation, give a title to the conversation in no more than 5 words. Respond with the title only.
-            Do not include quotes in the title.''',
+            goal='''To create a thoughtful title to a conversation based on the context of the conversation.''',
             backstory='''You are Master Elodin. You were an exceptionally brilliant student and also the youngest to have ever been admitted to the University, 
             at the age of 14. By the time you turned 18, you had become a Full Arcanist and began working as a Giller. 
             You continued on to become Master Namer and then Chancellor of the University, though the latter was short lived.''',
-            tools=[tool],
             verbose=True,
         )
     
@@ -132,7 +129,7 @@ class NamingAgents():
         tool = self.tools.get_chat_history_tool
         return Agent(
             role="summery creator",
-            goal="Given a chat history, create a summary of the conversation.",
+            goal="Given a chat history, create a summary of the conversation. If only a conversation_id is provided, use the tool to get the chat history.",
             backstory='''You are a clever AI agent that has been trained to summarize conversations. 
             You are very good at understanding the context of a conversation and can summarize it in a few sentences. ''',
             tools=[tool],

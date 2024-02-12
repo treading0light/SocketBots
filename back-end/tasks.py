@@ -13,7 +13,7 @@ class RenameTasks():
     
     def naming_task(self, agent):
         return Task(
-            description=f"Given the summary, provide a title for the conversation.",
+            description=f"Given the summary create a title for the conversation.",
             expected_output="A title for the conversation, no more than 5 words.",
             max_inter=3,
             agent=agent,

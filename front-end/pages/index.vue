@@ -1,10 +1,10 @@
 <template>
     <div class="flex justify-end">
-        <SideNav @request-rename="requestRename" @conversationDeleted="removeConversation" @conversation-selected="selectConversation"
+        <SideNav @request-rename="requestRename" @conversation-deleted="removeConversation" @conversation-selected="selectConversation"
         :conversations="conversations" :currentConversation="currentConversation" :socket="socket" />
 
         <ChatBox :socket="socket" :chatMessages="currentConversation.messages" :name="currentConversation.name"
-        @input-ready="sendInput" @rename-conversation="requestRename" />
+        @input-ready="sendInput" @request-rename="requestRename" />
     </div>
 </template>
 
@@ -45,12 +45,28 @@ const getAllConversations = () => {
     })
 }
 
-const selectConversation = (conversation) => {
+const selectConversation = (conversationId) => {
+    let conversation = conversations.value.find((c) => c.id === conversationId)
     currentConversation.value = conversation
+    moveConversation(conversationId)
+    socket.emit('conversation-selected', conversation.id)
+}
+
+const moveConversation = (conversationId) => {
+    const index = conversations.value.findIndex((c) => c.id === conversationId)
+    if (index !== -1) {
+        const [conversation] = conversations.value.splice(index, 1)
+        conversations.value.unshift(conversation)
+    }
 }
 
 const requestRename = () => {
-    socket.emit('request-rename', currentConversation.value.id)
+    const stagedConversation = currentConversation.value
+    socket.emit('request-rename', stagedConversation.id, (response) => {
+        const { name , id } = response
+        let convo = conversations.value.find((c) => c.id === id)
+        convo.name = name
+    })
 }
 
 const cleanMessage = (message) => {

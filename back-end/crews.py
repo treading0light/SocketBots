@@ -2,29 +2,32 @@ from crewai import Crew, Process, Task
 from agents import NamingAgents, GeneralAgents
 from tasks import RenameTasks
 from controllers.message_controller import get_messages_in_conversation
+import json
 
 class NamingCrew:
 
-    def __init__(self, convo_id):
-        self.convo_id = convo_id
+    def __init__(self, messages):
+        self.messages = messages
 
     def run(self):
-        messages = get_messages_in_conversation(self.convo_id)
+
         history_string = '# Chat History: \n'
-        for message in messages:
+        for message in self.messages:
             history_string += message['role'] + ': ' + message['content'] + " /n"
 
         tasks = RenameTasks()
         agents = NamingAgents()
+        print('Agents: ', agents.summery_agent)
 
         crew = Crew(
-            agents=[agents.summery_agent, agents.elodin],
-            tasks=[tasks.summery_task(history_string), tasks.naming_task],
+            agents=[agents.summery_agent(), agents.elodin()],
+            tasks=[tasks.summery_task(agents.summery_agent(), history_string), tasks.naming_task(agents.elodin())],
             process=Process.sequential,
             verbose=True
         )
 
         result = crew.kickoff()
+            
         return result
     
 class GeneralCrew:

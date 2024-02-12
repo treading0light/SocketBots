@@ -3,15 +3,17 @@
         <UButton @click="newConversation" label="New Conversation" color="primary" variant="outline"
         class="bg-primary text-black w-2/3 self-center" />
         <hr class="my-2">
+        <div class="flex flex-col gap-2 overflow-y-auto">
+            <div v-for="convo in conversations" :key="convo.id" class="flex justify-between">
+                <UButton  @click="selectConversation(convo)"
+                class="text-black w-2/3">{{ convo.name >= 10 ? convo.name.substring(0, 10) : convo.name}}</UButton>
 
-        <div v-for="convo in conversations" :key="convo.id" class="flex">
-            <UButton  @click="selectConversation(convo)"
-            class="text-black w-2/3 rounded-r-none">{{ convo.name >= 10 ? convo.name.substring(0, 10) : convo.name}}</UButton>
+                <UButton  @click="deleteConversation(convo)" variant="outline"
+                class="text-black hover:bg-red-500 hover:text-white font-bold w-fit h-fit self-center justify-self-end">Delete</UButton>
 
-            <UButton  @click="deleteConversation(convo)" variant="outline"
-            class="text-black bg-red-500 w-1/3 rounded-l-none">Delete</UButton>
-
+            </div>
         </div>
+        
 
     </div>
 
@@ -32,10 +34,10 @@ const props = defineProps({
         default: []
     }
 })
-const emit = defineEmits(['conversationSelected', 'conversationDeleted'])
+const emit = defineEmits(['conversation-selected', 'conversation-deleted'])
 
 const selectConversation = (conversation) => {
-    emit('conversation-selected', conversation)
+    emit('conversation-selected', conversation.id)
 }
 
 
@@ -50,7 +52,7 @@ const newConversation = () => {
 const deleteConversation = (conversation) => {
     props.socket.emit('delete-conversation', conversation.id, (response) => {
         console.log('deleted conversation')
-        emit('conversationDeleted', conversation)
+        emit('conversation-deleted', conversation)
         console.log(response)
     })
 }

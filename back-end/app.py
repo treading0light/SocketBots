@@ -2,7 +2,7 @@ import queue, threading
 from flask import Flask
 from flask_socketio import SocketIO
 from controllers.message_controller import new_message, get_messages_in_conversation
-from controllers.conversation_controller import new_conversation, get_all_conversations, delete_conversation, update_last_opened
+from controllers.conversation_controller import new_conversation, get_all_conversations, delete_conversation, update_last_opened, rename_conversation
 from tools import MainChatTools as tools
 from models import db
 from agents import SoloAgents
@@ -52,6 +52,11 @@ def handle_delete_conversation(conversation_id):
     delete_conversation(conversation_id)
     return 'Conversation deleted successfully'
 
+@socketio.on('conversation-selected')
+def handle_conversation_selected(conversation_id):
+    print("Conversation selected: ", conversation_id)
+    update_last_opened(conversation_id)
+
 @socketio.on('get-messages')
 def get_messages(conversation_id):
     messages = get_messages_in_conversation(conversation_id)
@@ -71,8 +76,10 @@ def handle_disconnect():
 @socketio.on('request-rename')
 def handle_request_rename(conversation_id):
     messages = get_messages_in_conversation(conversation_id)
-    naming_crew = NamingCrew(messages, conversation_id)
-    crew_queue.put((naming_crew, conversation_id))
+    naming_crew = NamingCrew(messages)
+    result = naming_crew.run()
+    conversation = rename_conversation(conversation_id, result)
+    return (conversation["name"], conversation["id"])
 
 @socketio.on('user-input')
 def handle_user_input(data):
@@ -113,7 +120,8 @@ def delegate_to_crew(in_queue, out_queue):
     while True:
         crew, convo_id = in_queue.get()
         result = crew.run()
-        out_queue.put((result, convo_id))
+        message = {"role": "assistant", "content": result}
+        out_queue.put((message, convo_id))
 
 
 threads = [
