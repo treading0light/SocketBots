@@ -80,7 +80,7 @@ def handle_user_input(data):
     messages = data.get('messages')
     conversation_id = data.get('conversation_id')
     user_message = data.get('user_message')
-    
+
     message = new_message(**user_message)
     messages.append(message)
     layer_1_queue.put((messages, conversation_id))
@@ -91,7 +91,11 @@ def send_to_user(in_queue, tool_call_queue, app):
     while True:
         raw_message, convo_id = in_queue.get()
         with app.app_context():
-            message = new_message(raw_message.content, raw_message.role, convo_id)
+            if type(raw_message) == dict:
+                message = new_message(raw_message["content"], raw_message["role"], convo_id)
+            else:
+                message = new_message(raw_message.content, raw_message.role, convo_id)
+
         if "[TOOL_CALL]" in message['content'] and "[/TOOL_CALL]" in message['content']:
             tool_call_queue.put((message, convo_id))
         

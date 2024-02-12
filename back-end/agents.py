@@ -2,6 +2,7 @@ from langchain_community.tools import DuckDuckGoSearchRun
 from openai import OpenAI
 from crewai import Agent
 from dotenv import load_dotenv
+import json
 
 load_dotenv()
 client = OpenAI()
@@ -14,11 +15,32 @@ class SoloAgents():
             {
                 "name": "assign_to_crew",
                 "description": '''Puts a crew of AI agents to work on a set of steps that you provide. 
-                You can only choose from the Crew options. Break down the task into 2-3 steps and define them clearly in one or two sentences.
-                Crew options: (NamingCrew: 'For renaming the current conversation', GeneralCrew: 'for general tasks')''',
-                "parameters": ["crew_name (str)", "steps (array)"]
+                You can only choose from the Crew options. Break down the job into 2-3 tasks and define them clearly in one or two sentences.
+                You must create at least one task for each agent in the crew["agents"] array.''',
+                "Crew options": [
+                    { 
+                        "name": "NamingCrew", 
+                        "description": "For renaming the current conversation", 
+                        "agents": ["summery_agent", "elodin"], 
+                        "parameters": ["(str): The name of the crew to assign the tasks to."]
+                    },
+                    { 
+                        "name": "GeneralCrew", 
+                        "description": "for general tasks. The order of tasks is important. first should be any number of tasks for the research_agent with search capabilities, and finally the creative_agent will word the response.", 
+                        "agents": ["creative_agent", "research_agent"],
+                        "parameters": [
+                            "GeneralCrew", 
+                            [
+                                { "description": "A detailed description of the task to be done that fits the research_agent's role", "agent": "research_agent", "expected_output": "The relevant data needed to complete the task."},
+                                { "description": "A detailed description of the task to be done that fits the creative_agent's role", "agent": "creative_agent", "expected_output": "The final response, thoughtfully worded and in markdown syntax."},
+                            ]
+                        ]
+                    }
+                ]
             }
         ]
+            
+        
         print("Frank is alive")
 
         system_message = {'role': 'system', 'content': f'''
@@ -31,7 +53,7 @@ class SoloAgents():
                         followed by the characters [/TOOL_CALL]
 
 
-                        tool_choices={tool_choices}'''
+                        tool_choices={json.dumps(tool_choices)}'''
                          }
 
         while True:
@@ -41,7 +63,7 @@ class SoloAgents():
 
             print(f"here's frank {messages}")
             completion = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4",
             messages=combined_messages
             )
             res = completion.choices[0].message
@@ -126,7 +148,8 @@ class GeneralAgents():
             backstory='''As the Quality Guardian, your eye for detail is unmatched. With extensive experience in quality assurance across various industries, 
             you bring a meticulous and methodical approach to reviewing creative solutions. Your expertise lies in identifying flaws and ensuring every detail aligns with the project's highest standards.''',
             verbose=True,
-            allow_delegation=False
+            allow_delegation=False,
+            tools=[search]
         )
     
     def creative_agent(self):
@@ -137,6 +160,18 @@ class GeneralAgents():
             With a background in diverse creative fields, you bring a wealth of inspiration to every project. 
             Your strength lies in synthesizing abstract concepts into tangible, innovative solutions that push the boundaries of what's possible.''',
             verbose=True,
+            allow_delegation=False
+        )
+    
+    def research_agent(self):
+        return Agent(
+            role="Research Specialist",
+            goal="Conduct in-depth research and analysis to gather valuable insights and information. Provide comprehensive data and evidence to support project decisions and strategies.",
+            backstory='''As the Research Specialist, your expertise in gathering and analyzing data is unparalleled. 
+            With a keen eye for detail and a methodical approach, you uncover valuable insights that drive informed decisions and strategies. 
+            Your ability to synthesize complex information into actionable recommendations is a key asset to the project.''',
+            verbose=True,
+            tools=[search],
             allow_delegation=False
         )
 

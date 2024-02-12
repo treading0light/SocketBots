@@ -1,16 +1,17 @@
 from crewai import Crew, Process, Task
 from agents import NamingAgents, GeneralAgents
 from tasks import RenameTasks
+from controllers.message_controller import get_messages_in_conversation
 
 class NamingCrew:
 
-    def __init__(self, messages, convo_id):
-        self.messages = messages
+    def __init__(self, convo_id):
         self.convo_id = convo_id
 
     def run(self):
+        messages = get_messages_in_conversation(self.convo_id)
         history_string = '# Chat History: \n'
-        for message in self.messages:
+        for message in messages:
             history_string += message['role'] + ': ' + message['content'] + " /n"
 
         tasks = RenameTasks()
@@ -18,7 +19,7 @@ class NamingCrew:
 
         crew = Crew(
             agents=[agents.summery_agent, agents.elodin],
-            tasks=[tasks.summery_task(self.messages), tasks.naming_task],
+            tasks=[tasks.summery_task(history_string), tasks.naming_task],
             process=Process.sequential,
             verbose=True
         )
@@ -37,7 +38,7 @@ class GeneralCrew:
 
     
             crew = Crew(
-                agents=[agents.creative_agent(), agents.qa_agent()],
+                agents=[agents.research_agent(), agents.creative_agent()],
                 tasks=self.tasks,
                 process=Process.sequential,
                 verbose=True,

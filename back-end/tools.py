@@ -52,19 +52,31 @@ class MainChatTools():
 
         Parameters:
         crew (str): The name of the crew to assign the tasks to.
-        pre_tasks (list): A list of tasks to be assigned to the crew.
+        task_list (list): (dict) { description (str): A list of tasks to be assigned to the crew. agent (str): The name of the agent to be assigned to the task.}
         '''
+        from agents import NamingAgents, GeneralAgents
+        general_agents = GeneralAgents()
+        naming_agents = NamingAgents()
+        agents = {
+                'qa_agent': general_agents.qa_agent(),
+                'creative_agent': general_agents.creative_agent(),
+                'research_agent': general_agents.research_agent(),
+                'summery_agent': naming_agents.summery_agent(),
+                'elodin': naming_agents.elodin()
+
+            }
         crew_name = parameters[0]
-        task_strings = parameters[1]
-        print(f'pre tasks {task_strings}')
+        task_list = parameters[1]
+        print(f'pre tasks {task_list}')
         tasks = []
-        for t in task_strings:
+        for t in task_list:
 
             print(f'one task: {t}')
             
             tasks.append(Task(
-                description='Research the largest bat species and the most common bat species',
+                description=t["description"],
                 # expected_output=t["expected_output"],
+                agent=agents[t["agent"]],
                 max_inter=3,
             ))
             print(f'task array: {tasks}')
@@ -90,7 +102,14 @@ class MainChatTools():
             # tool_call should be JSON as a string, turn it into a dictionary
             tool = tool_options[tool_call["tool_name"]]
             tool_output = tool(tool_call["parameters"])
+            message = {"role": "assistant", "content": tool_output}
                 
-            out_queue.put((tool_output, convo_id))
+            out_queue.put((message, convo_id))
+
+    @staticmethod
+    def refine_tool_call(tool_call: dict):
+        '''Refines the tool call message to be used by the tool call function.'''
+
+        pass
 
     
