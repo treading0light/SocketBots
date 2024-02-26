@@ -1,7 +1,7 @@
 <template>
     <div class="h-screen w-1/6 flex flex-col gap-2 bg-gray-400 p-2">
-        <UButton @click="newConversation" label="New Conversation" color="primary" variant="outline"
-        class="bg-primary text-black w-2/3 self-center" />
+        <UButton @click="newConversation" label="New Conversation" color="primary"
+        class=" text-black w-2/3 self-center" />
         <hr class="my-2">
         <div class="flex flex-col gap-2 overflow-y-auto">
             <div v-for="convo in conversations" :key="convo.id" class="flex justify-between">
@@ -66,8 +66,10 @@ props.socket.on('conversation-renamed', (response) => {
 
 onMounted(() => {
     setTimeout(() => {
-        selectConversation(props.conversations[0])
-        console.log('selected conversation' + props.conversations[0])
+        if (props.conversations.length > 0) {
+            selectConversation(props.conversations[0])
+            console.log('selected conversation' + props.conversations[0])
+        }
     }, 100);
     
 })

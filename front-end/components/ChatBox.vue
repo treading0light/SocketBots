@@ -19,7 +19,7 @@
         </div>
 
         <UTextarea color="gray" variant="outline" placeholder="Prompt..." :rows="4"
-        v-model="inputText" @keydown.enter="signalInputReady"
+        v-model="inputText" @keydown.enter="signalInputReady" :disabled="name == 'None'"
         class="w-2/3 self-center text-white mb-10" />
     </div>
 
@@ -48,6 +48,7 @@ const props = defineProps({
 const emit = defineEmits(['input-ready', 'request-rename'])
 
 const signalInputReady = (event) => {
+    if (event.key == 'Enter' && event.shiftKey || inputText.value == '' ) return
     event.preventDefault()
 
     emit('input-ready', inputText.value)
