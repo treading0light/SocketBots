@@ -18,6 +18,7 @@ open a new terminal and:
 ```bash
 cd back-end
 pip install requirements.txt
+pip install eventlet
 flask run
 ```
 
