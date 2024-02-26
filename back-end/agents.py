@@ -1,5 +1,6 @@
 from langchain_community.tools import DuckDuckGoSearchRun
 from openai import OpenAI
+import ollama
 from crewai import Agent
 from dotenv import load_dotenv
 import json
@@ -62,12 +63,13 @@ class SoloAgents():
             combined_messages = [system_message] + messages
 
             print(f"here's frank {messages}")
-            completion = client.chat.completions.create(
-            model="gpt-4",
-            messages=combined_messages
+            completion = ollama.chat(
+            model="mistral",
+            messages=combined_messages,
             )
-            res = completion.choices[0].message
-            out_queue.put((res, convo_id))
+            # res = completion.choices[0].message
+            print(f'frank response: {completion["message"]}')
+            out_queue.put((completion['message'], convo_id))
            
 
     def agent_steve(messages):
